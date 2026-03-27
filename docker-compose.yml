@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: analytics_db
+    environment:
+      POSTGRES_DB: analytics_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    container_name: analytics_api
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py seed_data --users 10 --clicks 150 &&
+             gunicorn -c gunicorn_config.py config.wsgi:application"
+    environment:
+      DEBUG: 'False'
+      SECRET_KEY: 'django-insecure-production-key'
+      ALLOWED_HOSTS: 'localhost,127.0.0.1,0.0.0.0'
+      USE_POSTGRESQL: 'True'
+      DB_NAME: analytics_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: db
+      DB_PORT: '5432'
+      SECURE_SSL_REDIRECT: 'False'
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

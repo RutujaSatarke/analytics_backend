@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.sqlite3
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+media/
+
+# Static files (if collected)
+staticfiles/
+
+# Migrations (optional - keep if needed)
+# */migrations/
+# !*/migrations/__init__.py
+
+# VS Code
+.vscode/
+
+# PyCharm
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker
+*.pid
+*.seed
+*.pid.lock
+
+# Gunicorn
+gunicorn.log
+
+# Coverage / Testing
+htmlcov/
+.coverage
+.coverage.*
+.cache
+pytest_cache/
+
+# Node (if frontend added later)
+node_modules/
+
+# Misc
+*.swp
+*.bak
+*.tmp
+
+# Logs
+logs/
+*.log
