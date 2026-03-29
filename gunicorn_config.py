@@ -5,20 +5,25 @@ Usage: gunicorn -c gunicorn_config.py config.wsgi:application
 
 import multiprocessing
 import os
-from decouple import config
 
-# Server socket
-bind = config('GUNICORN_BIND', default='0.0.0.0:8000')
+# ============================================================
+# SERVER SOCKET
+# ============================================================
+bind = os.environ.get('GUNICORN_BIND', '0.0.0.0:10000')  # Render uses port 10000
 backlog = 2048
 
-# Worker Processes
-workers = config('GUNICORN_WORKERS', default=multiprocessing.cpu_count() * 2 + 1, cast=int)
+# ============================================================
+# WORKERS
+# ============================================================
+workers = int(os.environ.get('GUNICORN_WORKERS', multiprocessing.cpu_count() * 2 + 1))
 worker_class = 'sync'
 worker_connections = 1000
-timeout = 30
+timeout = 120
 keepalive = 2
 
-# Server mechanics
+# ============================================================
+# SERVER MECHANICS
+# ============================================================
 daemon = False
 pidfile = None
 umask = 0
@@ -26,16 +31,23 @@ user = None
 group = None
 tmp_upload_dir = None
 
-# Logging
-accesslog = config('GUNICORN_ACCESS_LOG', default='-')
-errorlog = config('GUNICORN_ERROR_LOG', default='-')
-loglevel = config('GUNICORN_LOG_LEVEL', default='info')
-access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(D)s'
+# ============================================================
+# LOGGING
+# ============================================================
+accesslog = os.environ.get('GUNICORN_ACCESS_LOG', '-')  # stdout
+errorlog = os.environ.get('GUNICORN_ERROR_LOG', '-')    # stderr
+loglevel = os.environ.get('GUNICORN_LOG_LEVEL', 'info')
 
-# Process naming
+access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s'
+
+# ============================================================
+# PROCESS NAME
+# ============================================================
 proc_name = 'analytics-api'
 
-# Server hooks
+# ============================================================
+# HOOKS
+# ============================================================
 def on_starting(server):
     print("Gunicorn server starting...")
 
