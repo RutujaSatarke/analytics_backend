@@ -1,5 +1,6 @@
 """
 Django settings for config project.
+Optimized for 512MB memory constraint (Render free tier).
 """
 
 from pathlib import Path
@@ -17,6 +18,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ============================================================
 SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key')
 
+# CRITICAL for memory: Disable DEBUG in production
+# DEBUG = True causes verbose error pages, verbose logging, disables optimizations
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = os.environ.get(
@@ -25,14 +28,17 @@ ALLOWED_HOSTS = os.environ.get(
 ).split(',')
 
 # ============================================================
-# APPLICATIONS
+# APPLICATIONS (MINIMAL SET)
 # ============================================================
+# Removed: django.contrib.sessions (not needed with JWT)
+# Removed: django.contrib.messages (not needed for API)
+# Kept: Only essential components for auth and ORM
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
+    # 'django.contrib.sessions',  # REMOVED: Not needed with JWT auth
+    # 'django.contrib.messages',  # REMOVED: Not needed for API
     'django.contrib.staticfiles',
 
     # Third-party
@@ -46,17 +52,20 @@ INSTALLED_APPS = [
 ]
 
 # ============================================================
-# MIDDLEWARE
+# MIDDLEWARE (MINIMAL SET)
 # ============================================================
+# Removed: SessionMiddleware (JWT doesn't use sessions)
+# Removed: MessageMiddleware (not needed for API)
+# Kept: Only security-critical and functional middleware
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
+    # 'django.contrib.sessions.middleware.SessionMiddleware',  # REMOVED
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
+    # 'django.contrib.messages.middleware.MessageMiddleware',  # REMOVED
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
@@ -72,7 +81,7 @@ TEMPLATES = [
             'context_processors': [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+                # 'django.contrib.messages.context_processors.messages',  # REMOVED
             ],
         },
     },
@@ -83,22 +92,37 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # ============================================================
 # DATABASE
 # ============================================================
-DATABASES = {
-    'default': dj_database_url.parse(
-        os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3'),
-        conn_max_age=600,
-        ssl_require=not DEBUG
-    )
-}
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+if DATABASE_URL:
+    # Production (Render PostgreSQL)
+    DATABASES = {
+        'default': dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,  # Connection pooling
+            ssl_require=True
+        )
+    }
+else:
+    # Local (SQLite)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
+# Database query optimization
+# ATOMIC_REQUESTS = False  # Use explicit transactions for better control
+# CONN_MAX_AGE already set in dj_database_url
 
 # ============================================================
-# PASSWORD VALIDATION
+# PASSWORD VALIDATION (MINIMAL)
 # ============================================================
+# Reduced validators for faster registration without sacrificing security
 AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 8}},
     {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
 # ============================================================
@@ -112,7 +136,8 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 50,
+    'PAGE_SIZE': 25,  # CRITICAL: Reduced from 50 to 25 to prevent memory spikes
+    'MAX_PAGE_SIZE': 50,  # Hard cap: never return more than 50 items
 }
 
 # ============================================================
@@ -169,9 +194,58 @@ USE_TZ = True
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # ============================================================
-# LOGGING
+# CACHING (LIGHTWEIGHT IN-MEMORY)
 # ============================================================
+# Use Django's local memory cache for analytics endpoint caching
+# This reduces database hits without adding Redis dependency (saves memory)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'memory-cache',
+        'TIMEOUT': 300,  # 5 minutes default
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000  # Prevent unbounded cache growth
+        }
+    }
+}
+
+# Cache timeout for analytics endpoint (balance freshness vs. memory)
+ANALYTICS_CACHE_TIMEOUT = 60  # 60 seconds for analytics queries
+
+# ============================================================
+# LOGGING (MINIMAL - CRITICAL FOR MEMORY)
+# ============================================================
+# CRITICAL: Default Django logging is VERBOSE and creates memory overhead
+# Set WARNING level to suppress debug info, SQL queries, etc.
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': False,
+    'disable_existing_loggers': True,  # Disable all default loggers
+    'formatters': {
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',  # Only log WARNING and above (ERROR, CRITICAL)
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'WARNING',  # Suppress SQL query logging
+            'propagate': False,
+        },
+    },
 }

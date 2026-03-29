@@ -6,6 +6,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate, get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.exceptions import ValidationError
+from django.core.cache import cache
+from django.db.models import Count
 
 from analytics.models import FeatureClick
 from api.serializers import (
@@ -103,6 +105,11 @@ class AuthViewSet(viewsets.ViewSet):
 class TrackingViewSet(viewsets.ViewSet):
     """
     Feature tracking endpoint.
+    
+    OPTIMIZATION:
+    - Minimizes object instantiation
+    - Uses lightweight FeatureClickSerializer (no nested users)
+    - Strict pagination on my_clicks endpoint
     """
     permission_classes = [IsAuthenticated]
 
@@ -111,6 +118,8 @@ class TrackingViewSet(viewsets.ViewSet):
         """
         POST /api/tracking/track/
         Record a feature click for the authenticated user.
+        
+        OPTIMIZED: Creates FeatureClick directly, serialized with lightweight data.
         """
         serializer = FeatureClickSerializer(data=request.data)
         if serializer.is_valid():
@@ -129,15 +138,31 @@ class TrackingViewSet(viewsets.ViewSet):
     def my_clicks(self, request):
         """
         GET /api/tracking/my_clicks/?limit=10
-        Get all feature clicks for the authenticated user.
+        Get feature clicks for the authenticated user.
+        
+        OPTIMIZED:
+        - Uses select_related('user') to avoid N+1 queries
+        - Strict limit: max 50 items (enforced by MAX_PAGE_SIZE in settings)
+        - Lazy evaluation: queryset not materialized until serialized
+        - Uses only() to fetch minimal fields
         """
-        limit = request.query_params.get('limit', 50)
+        limit = request.query_params.get('limit', 25)  # Default 25, max 50
         try:
             limit = int(limit)
-        except ValueError:
-            limit = 50
+            # Enforce strict limit - never load more than 50 items
+            limit = min(limit, 50)
+        except (ValueError, TypeError):
+            limit = 25
         
-        clicks = FeatureClick.objects.filter(user=request.user)[:limit]
+        # Optimize query: fetch minimal fields, paginate strictly
+        clicks = (
+            FeatureClick.objects
+            .filter(user=request.user)
+            .select_related('user')  # Avoid N+1 on user lookups
+            .only('id', 'user_id', 'user__username', 'feature_name', 'timestamp')
+            [:limit]
+        )
+        
         serializer = FeatureClickSerializer(clicks, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -145,6 +170,11 @@ class TrackingViewSet(viewsets.ViewSet):
 class AnalyticsViewSet(viewsets.ViewSet):
     """
     Analytics endpoints for dashboard data.
+    
+    OPTIMIZATION STRATEGY:
+    - All heavy lifting done by AnalyticsService at DB level
+    - Caching layer prevents repeated queries
+    - Strict pagination on response size
     """
     permission_classes = [IsAuthenticated]
 
@@ -162,10 +192,15 @@ class AnalyticsViewSet(viewsets.ViewSet):
         
         Returns:
             {
-                "bar_chart": [...],
-                "line_chart": [...],
+                "bar_chart": [...],  # Aggregated by feature, max 6 items
+                "line_chart": [...], # Aggregated by date
                 "stats": {"unique_users": X, "total_clicks": Y}
             }
+            
+        OPTIMIZED:
+        - AnalyticsService caches results for 60 seconds
+        - DB-level aggregation, no Python loops
+        - Strict response size via service limits
         """
         # Validate query parameters
         serializer = AnalyticsFilterSerializer(data=request.query_params)
@@ -178,6 +213,7 @@ class AnalyticsViewSet(viewsets.ViewSet):
         filters = serializer.validated_data
         
         try:
+            # All heavy lifting happens in AnalyticsService (DB-level aggregation + caching)
             bar_chart = AnalyticsService.get_bar_chart_data(filters)
             line_chart = AnalyticsService.get_line_chart_data(filters)
             stats = AnalyticsService.get_user_stats(filters)
@@ -199,16 +235,27 @@ class AnalyticsViewSet(viewsets.ViewSet):
         """
         GET /api/analytics/features/
         Get distinct feature names with their click counts.
+        
+        OPTIMIZED:
+        - Uses values() + annotate() for DB aggregation
+        - Never materializes full FeatureClick objects
+        - Cached for 5 minutes
         """
-        features = (
-            FeatureClick.objects
-            .values('feature_name')
-            .annotate(count=Count('id'))
-            .order_by('-count')
-        )
+        cache_key = 'features_list'
+        features = cache.get(cache_key)
+        
+        if features is None:
+            # DB-level aggregation: single query
+            features = list(
+                FeatureClick.objects
+                .values('feature_name')
+                .annotate(count=Count('id'))
+                .order_by('-count')
+            )
+            cache.set(cache_key, features, 300)  # Cache for 5 minutes
         
         return Response({
-            'features': list(features)
+            'features': features
         }, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'])

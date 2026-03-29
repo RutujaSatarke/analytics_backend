@@ -67,13 +67,18 @@ class UserDetailSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at']
 
 
+# OPTIMIZED: Lightweight FeatureClick serializer for tracking endpoint
+# Removed nested UserDetailSerializer to avoid loading full user objects
+# This reduces memory usage significantly on tracking endpoints
 class FeatureClickSerializer(serializers.ModelSerializer):
-    user = UserDetailSerializer(read_only=True)
+    # Use fields-only approach: no serializer nesting
+    username = serializers.CharField(source='user.username', read_only=True)
+    user_id = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = FeatureClick
-        fields = ['id', 'user', 'feature_name', 'timestamp']
-        read_only_fields = ['id', 'user', 'timestamp']
+        fields = ['id', 'user_id', 'username', 'feature_name', 'timestamp']
+        read_only_fields = ['id', 'user_id', 'username', 'timestamp']
 
     def validate_feature_name(self, value):
         valid_features = [choice[0] for choice in FeatureClick.FEATURE_CHOICES]

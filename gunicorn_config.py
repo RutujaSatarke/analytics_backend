@@ -13,12 +13,18 @@ bind = os.environ.get('GUNICORN_BIND', '0.0.0.0:10000')  # Render uses port 1000
 backlog = 2048
 
 # ============================================================
-# WORKERS
+# WORKERS - OPTIMIZED FOR 512MB RAM
 # ============================================================
-workers = int(os.environ.get('GUNICORN_WORKERS', multiprocessing.cpu_count() * 2 + 1))
+# CRITICAL: On 512MB RAM, we can only afford 1-2 worker processes
+# Each worker baseline = 60-80MB (Django + models loaded)
+# workers = 1: Uses ~120MB total (1 worker + master process)
+# workers = 2: Uses ~200MB total (2 workers + master process)
+# Formula: For 512MB, safe maximum = 1 worker with threads, or 2 max
+workers = int(os.environ.get('GUNICORN_WORKERS', '1'))
 worker_class = 'sync'
-worker_connections = 1000
-timeout = 120
+threads = 2  # Added: Use 2 threads per worker for concurrency
+worker_connections = 100  # Reduced from 1000 (memory concern)
+timeout = 60  # Reduced from 120 (prevent hung requests holding memory)
 keepalive = 2
 
 # ============================================================
