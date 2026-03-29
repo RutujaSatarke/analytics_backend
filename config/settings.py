@@ -47,7 +47,7 @@ if os.environ.get('ALLOWED_HOSTS'):
 INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
-    # 'django.contrib.admin',  # REMOVED: Not needed for REST API
+    'django.contrib.admin',  # REMOVED: Not needed for REST API
     # 'django.contrib.sessions',  # REMOVED: Not needed with JWT auth
     # 'django.contrib.messages',  # REMOVED: Not needed for API
     'django.contrib.staticfiles',
