@@ -22,22 +22,19 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key')
 # DEBUG = True causes verbose error pages, verbose logging, disables optimizations
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-# ALLOWED_HOSTS configuration - supports both environment variable and dynamic Render domains
-_ALLOWED_HOSTS = ['localhost', '127.0.0.1']
-_ENV_HOSTS = os.environ.get('ALLOWED_HOSTS', '').strip()
+# ALLOWED_HOSTS - comprehensive list for all deployment scenarios
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    'analytics-backend-3f79.onrender.com',  # Your specific Render domain
+    '.onrender.com',                         # Wildcard for other Render subdomains
+    'analytics-dashboard-ten-delta.vercel.app',  # Frontend domain
+]
 
-if _ENV_HOSTS:
-    # If environment variable is set, use it
-    _ALLOWED_HOSTS.extend([h.strip() for h in _ENV_HOSTS.split(',') if h.strip()])
-else:
-    # Default: support all Render domains + specific domain
-    _ALLOWED_HOSTS.extend([
-        '.onrender.com',
-        'analytics-backend-3f79.onrender.com',
-        'analytics-dashboard-ten-delta.vercel.app',
-    ])
-
-ALLOWED_HOSTS = _ALLOWED_HOSTS
+# Allow environment variable override if needed (for testing/custom domains)
+if os.environ.get('ALLOWED_HOSTS'):
+    env_hosts = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', '').split(',') if h.strip()]
+    ALLOWED_HOSTS.extend(env_hosts)
 
 # ============================================================
 # APPLICATIONS (MINIMAL SET)
