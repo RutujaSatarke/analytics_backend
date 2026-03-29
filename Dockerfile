@@ -20,4 +20,4 @@ COPY . .
 EXPOSE 10000
 
 # Run everything at container start (FREE PLAN FIX)
-CMD sh -c "python manage.py migrate && python manage.py createsu && python manage.py seed_data.py && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:10000"
+CMD sh -c "python manage.py migrate && python manage.py createsu && python manage.py seed_data && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:10000"
