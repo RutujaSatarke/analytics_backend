@@ -4,7 +4,6 @@ Django settings for config project.
 
 from pathlib import Path
 import os
-from decouple import config
 import dj_database_url
 from datetime import timedelta
 
@@ -16,15 +15,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ============================================================
 # SECURITY
 # ============================================================
-SECRET_KEY = config('SECRET_KEY', default='dev-secret-key')
+SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key')
 
-DEBUG = config('DEBUG', default=False, cast=bool)
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = config(
+ALLOWED_HOSTS = os.environ.get(
     'ALLOWED_HOSTS',
-    default='localhost,127.0.0.1,.onrender.com',
-    cast=lambda v: [s.strip() for s in v.split(',')]
-)
+    'localhost,127.0.0.1,.onrender.com'
+).split(',')
 
 # ============================================================
 # APPLICATIONS
@@ -52,7 +50,7 @@ INSTALLED_APPS = [
 # ============================================================
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # for static files
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -87,7 +85,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # ============================================================
 DATABASES = {
     'default': dj_database_url.parse(
-        config('DATABASE_URL', default='sqlite:///db.sqlite3'),
+        os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3'),
         conn_max_age=600,
         ssl_require=not DEBUG
     )
@@ -139,10 +137,10 @@ CORS_ALLOW_CREDENTIALS = True
 # ============================================================
 # SECURITY SETTINGS
 # ============================================================
-SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
-SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=True, cast=bool)
-CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=True, cast=bool)
-SECURE_HSTS_SECONDS = config('SECURE_HSTS_SECONDS', default=31536000, cast=int)
+SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'True') == 'True'
+SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'True') == 'True'
+CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', 'True') == 'True'
+SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', 31536000))
 
 CSRF_TRUSTED_ORIGINS = [
     "https://*.onrender.com",
@@ -171,7 +169,7 @@ USE_TZ = True
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # ============================================================
-# LOGGING (OPTIONAL)
+# LOGGING
 # ============================================================
 LOGGING = {
     'version': 1,
