@@ -22,10 +22,22 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key')
 # DEBUG = True causes verbose error pages, verbose logging, disables optimizations
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = os.environ.get(
-    'ALLOWED_HOSTS',
-    'localhost,127.0.0.1,.onrender.com'
-).split(',')
+# ALLOWED_HOSTS configuration - supports both environment variable and dynamic Render domains
+_ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+_ENV_HOSTS = os.environ.get('ALLOWED_HOSTS', '').strip()
+
+if _ENV_HOSTS:
+    # If environment variable is set, use it
+    _ALLOWED_HOSTS.extend([h.strip() for h in _ENV_HOSTS.split(',') if h.strip()])
+else:
+    # Default: support all Render domains + specific domain
+    _ALLOWED_HOSTS.extend([
+        '.onrender.com',
+        'analytics-backend-3f79.onrender.com',
+        'analytics-dashboard-ten-delta.vercel.app',
+    ])
+
+ALLOWED_HOSTS = _ALLOWED_HOSTS
 
 # ============================================================
 # APPLICATIONS (MINIMAL SET)
@@ -154,7 +166,8 @@ SIMPLE_JWT = {
 # ============================================================
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://analytics-dashboard-ten-delta.vercel.app"
+    "https://analytics-dashboard-ten-delta.vercel.app",
+    "analytics-backend-3f79.onrender.com",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
