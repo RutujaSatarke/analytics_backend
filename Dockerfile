@@ -16,11 +16,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy project
 COPY . .
 
-# Collect static files
-RUN python manage.py collectstatic --noinput
+# Expose port (Render uses 10000 internally)
+EXPOSE 10000
 
-# Expose port
-EXPOSE 8000
-
-# Run gunicorn
-CMD ["gunicorn", "-c", "gunicorn_config.py", "config.wsgi:application"]
+# Run everything at container start (FREE PLAN FIX)
+CMD sh -c "python manage.py migrate && python manage.py createsu && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:10000"
