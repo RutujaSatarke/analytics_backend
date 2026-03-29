@@ -25,8 +25,7 @@ class AnalyticsService:
 
     @staticmethod
     def _build_base_queryset(filters):
-        
-        # Apply date filters EARLY (critical for memory efficiency)
+        queryset = FeatureClick.objects.all()
         if filters.get('start_date'):
             queryset = queryset.filter(timestamp__date__gte=filters['start_date'])
         if filters.get('end_date'):
