@@ -1,6 +1,5 @@
 """
 Django settings for config project.
-Production-ready for Render (free tier) with Admin + REST API.
 """
 
 from pathlib import Path
@@ -8,14 +7,8 @@ import os
 import dj_database_url
 from datetime import timedelta
 
-# ============================================================
-# BASE DIR
-# ============================================================
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# ============================================================
-# SECURITY
-# ============================================================
 SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key')
 
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
@@ -32,9 +25,6 @@ if os.environ.get('ALLOWED_HOSTS'):
     env_hosts = [h.strip() for h in os.environ.get('ALLOWED_HOSTS').split(',') if h.strip()]
     ALLOWED_HOSTS.extend(env_hosts)
 
-# ============================================================
-# APPLICATIONS (ADMIN FIXED)
-# ============================================================
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -51,9 +41,6 @@ INSTALLED_APPS = [
     'api.apps.ApiConfig',
 ]
 
-# ============================================================
-# MIDDLEWARE (ORDER FIXED)
-# ============================================================
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -74,9 +61,6 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'config.urls'
 AUTH_USER_MODEL = 'users.CustomUser'
 
-# ============================================================
-# TEMPLATES (ADMIN REQUIRED FIX)
-# ============================================================
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -94,9 +78,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# ============================================================
-# DATABASE
-# ============================================================
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 if DATABASE_URL:
@@ -115,14 +96,8 @@ else:
         }
     }
 
-# ============================================================
-# PASSWORD VALIDATION
-# ============================================================
 AUTH_PASSWORD_VALIDATORS = []
 
-# ============================================================
-# REST FRAMEWORK
-# ============================================================
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -133,17 +108,11 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 25,
 }
 
-# ============================================================
-# JWT
-# ============================================================
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
 }
 
-# ============================================================
-# CORS (FIXED)
-# ============================================================
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "https://analytics-dashboard-ten-delta.vercel.app",
@@ -152,9 +121,6 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
-# ============================================================
-# SECURITY SETTINGS
-# ============================================================
 SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'True') == 'True'
 SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'True') == 'True'
 CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', 'True') == 'True'
@@ -165,30 +131,18 @@ CSRF_TRUSTED_ORIGINS = [
     "https://analytics-dashboard-ten-delta.vercel.app",
 ]
 
-# ============================================================
-# STATIC FILES
-# ============================================================
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-# ============================================================
-# INTERNATIONALIZATION
-# ============================================================
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# ============================================================
-# DEFAULT PRIMARY KEY
-# ============================================================
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# ============================================================
-# CACHING
-# ============================================================
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
@@ -202,9 +156,6 @@ CACHES = {
 
 ANALYTICS_CACHE_TIMEOUT = 60
 
-# ============================================================
-# LOGGING (LOW MEMORY)
-# ============================================================
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': True,

@@ -23,17 +23,10 @@ User = get_user_model()
 
 
 class AuthViewSet(viewsets.ViewSet):
-    """
-    Authentication endpoints: register and login.
-    """
     permission_classes = [AllowAny]
 
     @action(detail=False, methods=['post'])
     def register(self, request):
-        """
-        POST /api/auth/register/
-        Create a new user account.
-        """
         serializer = UserRegistrationSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
@@ -48,10 +41,6 @@ class AuthViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['post'])
     def login(self, request):
-        """
-        POST /api/auth/login/
-        Authenticate user and return JWT tokens.
-        """
         serializer = UserLoginSerializer(data=request.data)
         if serializer.is_valid():
             user = authenticate(
@@ -74,10 +63,6 @@ class AuthViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
     def logout(self, request):
-        """
-        POST /api/auth/logout/
-        Invalidate refresh token (optional).
-        """
         try:
             refresh_token = request.data.get('refresh')
             token = RefreshToken(refresh_token)
@@ -94,33 +79,15 @@ class AuthViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def me(self, request):
-        """
-        GET /api/auth/me/
-        Get current authenticated user details.
-        """
         serializer = UserDetailSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class TrackingViewSet(viewsets.ViewSet):
-    """
-    Feature tracking endpoint.
-    
-    OPTIMIZATION:
-    - Minimizes object instantiation
-    - Uses lightweight FeatureClickSerializer (no nested users)
-    - Strict pagination on my_clicks endpoint
-    """
     permission_classes = [IsAuthenticated]
 
     @action(detail=False, methods=['post'])
     def track(self, request):
-        """
-        POST /api/tracking/track/
-        Record a feature click for the authenticated user.
-        
-        OPTIMIZED: Creates FeatureClick directly, serialized with lightweight data.
-        """
         serializer = FeatureClickSerializer(data=request.data)
         if serializer.is_valid():
             # Attach the current user to the feature click
@@ -136,16 +103,6 @@ class TrackingViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['get'])
     def my_clicks(self, request):
-        """
-        GET /api/tracking/my_clicks/?limit=10
-        Get feature clicks for the authenticated user.
-        
-        OPTIMIZED:
-        - Uses select_related('user') to avoid N+1 queries
-        - Strict limit: max 50 items (enforced by MAX_PAGE_SIZE in settings)
-        - Lazy evaluation: queryset not materialized until serialized
-        - Uses only() to fetch minimal fields
-        """
         limit = request.query_params.get('limit', 25)  # Default 25, max 50
         try:
             limit = int(limit)
@@ -168,40 +125,10 @@ class TrackingViewSet(viewsets.ViewSet):
 
 
 class AnalyticsViewSet(viewsets.ViewSet):
-    """
-    Analytics endpoints for dashboard data.
-    
-    OPTIMIZATION STRATEGY:
-    - All heavy lifting done by AnalyticsService at DB level
-    - Caching layer prevents repeated queries
-    - Strict pagination on response size
-    """
     permission_classes = [IsAuthenticated]
 
     @action(detail=False, methods=['get'])
     def analytics(self, request):
-        """
-        GET /api/analytics/analytics/
-        
-        Query Parameters:
-        - start_date (YYYY-MM-DD)
-        - end_date (YYYY-MM-DD)
-        - age_group (<18, 18-40, >40)
-        - gender (Male, Female, Other)
-        - feature_name (optional, for line chart filtering)
-        
-        Returns:
-            {
-                "bar_chart": [...],  # Aggregated by feature, max 6 items
-                "line_chart": [...], # Aggregated by date
-                "stats": {"unique_users": X, "total_clicks": Y}
-            }
-            
-        OPTIMIZED:
-        - AnalyticsService caches results for 60 seconds
-        - DB-level aggregation, no Python loops
-        - Strict response size via service limits
-        """
         # Validate query parameters
         serializer = AnalyticsFilterSerializer(data=request.query_params)
         if not serializer.is_valid():
@@ -232,15 +159,6 @@ class AnalyticsViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['get'])
     def features(self, request):
-        """
-        GET /api/analytics/features/
-        Get distinct feature names with their click counts.
-        
-        OPTIMIZED:
-        - Uses values() + annotate() for DB aggregation
-        - Never materializes full FeatureClick objects
-        - Cached for 5 minutes
-        """
         cache_key = 'features_list'
         features = cache.get(cache_key)
         
@@ -260,10 +178,6 @@ class AnalyticsViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['get'])
     def health(self, request):
-        """
-        GET /api/analytics/health/
-        Health check endpoint.
-        """
         return Response({
             'status': 'healthy',
             'message': 'Analytics API is running.'

@@ -30,9 +30,6 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.HTTP_INFO(f'Starting data seeding...'))
 
-        # ============================================================
-        # CREATE USERS WITH REALISTIC DEMOGRAPHICS
-        # ============================================================
         self.stdout.write(self.style.HTTP_INFO(f'Creating {users_count} users with realistic demographics...'))
 
         users = []
@@ -127,9 +124,6 @@ class Command(BaseCommand):
                     self.style.WARNING(f'⚠ User already exists: {username}')
                 )
 
-        # ============================================================
-        # CREATE FEATURE CLICKS WITH REALISTIC PATTERNS
-        # ============================================================
         self.stdout.write(self.style.HTTP_INFO(f'Creating {clicks_count} feature clicks with realistic usage patterns...'))
 
         features = [choice[0] for choice in FeatureClick.FEATURE_CHOICES]
@@ -208,9 +202,6 @@ class Command(BaseCommand):
                         self.style.SUCCESS(f'✓ Created {feature_clicks_created}/{clicks_count} feature clicks')
                     )
 
-        # ============================================================
-        # SUMMARY
-        # ============================================================
         self.stdout.write(self.style.SUCCESS(
             f'\n🎉 Data seeding completed!'
         ))

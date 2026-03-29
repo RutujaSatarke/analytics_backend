@@ -9,17 +9,6 @@ from django.core.cache import cache
 User = get_user_model()
 
 class AnalyticsService:
-    """
-    Service for analytics aggregation and filtering.
-    
-    OPTIMIZATION STRATEGY:
-    - All aggregation happens at DB level (aggregate(), annotate())
-    - No Python-level loops or list comprehensions over querysets
-    - Lazy evaluation: querysets not materialized until serialized
-    - Caching for frequently-requested analytics
-    - Strict filtering BEFORE aggregation
-    """
-    
     # Cache timeout for analytics queries (balance freshness vs memory)
     CACHE_TIMEOUT = 60  # seconds
     
@@ -36,11 +25,6 @@ class AnalyticsService:
 
     @staticmethod
     def _build_base_queryset(filters):
-        """
-        Build optimized base queryset with all filters applied.
-        Filters are applied BEFORE aggregation to minimize data size.
-        """
-        queryset = FeatureClick.objects.all()
         
         # Apply date filters EARLY (critical for memory efficiency)
         if filters.get('start_date'):
@@ -60,20 +44,6 @@ class AnalyticsService:
 
     @staticmethod
     def get_bar_chart_data(filters):
-        """
-        Group feature clicks by feature_name and return counts.
-        
-        OPTIMIZATION:
-        - Uses .values().annotate() for DB-level aggregation
-        - No Python loops or list conversion that would materialize data
-        - Returns lazy ValuesQuerySet
-
-        Args:
-            filters: dict with start_date, end_date, age_group, gender
-            
-        Returns:
-            list of dicts with feature_name and count
-        """
         # Check cache first
         cache_key = f"bar_chart_{hash(str(sorted(filters.items())))}"
         cached_result = cache.get(cache_key)
@@ -98,20 +68,6 @@ class AnalyticsService:
 
     @staticmethod
     def get_line_chart_data(filters):
-        """
-        Group feature clicks by date for a specific feature.
-        
-        OPTIMIZATION:
-        - Uses TruncDay at DB level for date truncation
-        - Single aggregation query with all filters applied
-        - Lazy evaluation until serialization
-
-        Args:
-            filters: dict with start_date, end_date, age_group, gender, feature_name
-            
-        Returns:
-            list of dicts with date and count
-        """
         # Check cache first
         cache_key = f"line_chart_{hash(str(sorted(filters.items())))}"
         cached_result = cache.get(cache_key)
@@ -149,20 +105,6 @@ class AnalyticsService:
 
     @staticmethod
     def get_user_stats(filters):
-        """
-        Get total unique users and total clicks.
-        
-        OPTIMIZATION:
-        - Uses values('user_id').distinct() instead of values('user')
-        - Two aggregation queries (efficient, DB-level aggregation)
-        - No Python loops
-
-        Args:
-            filters: dict with start_date, end_date, age_group, gender
-            
-        Returns:
-            dict with unique_users and total_clicks
-        """
         # Check cache first
         cache_key = f"stats_{hash(str(sorted(filters.items())))}"
         cached_result = cache.get(cache_key)
