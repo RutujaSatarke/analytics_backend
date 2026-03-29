@@ -39,13 +39,15 @@ if os.environ.get('ALLOWED_HOSTS'):
 # ============================================================
 # APPLICATIONS (MINIMAL SET)
 # ============================================================
+# For REST API with JWT: We don't need Django's session-based auth or admin
+# Removed: django.contrib.admin (not needed for REST API)
 # Removed: django.contrib.sessions (not needed with JWT)
 # Removed: django.contrib.messages (not needed for API)
-# Kept: Only essential components for auth and ORM
+# Kept: Only essential components for auth model and ORM
 INSTALLED_APPS = [
-    'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
+    # 'django.contrib.admin',  # REMOVED: Not needed for REST API
     # 'django.contrib.sessions',  # REMOVED: Not needed with JWT auth
     # 'django.contrib.messages',  # REMOVED: Not needed for API
     'django.contrib.staticfiles',
@@ -63,7 +65,9 @@ INSTALLED_APPS = [
 # ============================================================
 # MIDDLEWARE (MINIMAL SET)
 # ============================================================
+# For REST API with JWT: Session and auth middleware not needed
 # Removed: SessionMiddleware (JWT doesn't use sessions)
+# Removed: AuthenticationMiddleware (JWT handled by DRF, not Django middleware)
 # Removed: MessageMiddleware (not needed for API)
 # Kept: Only security-critical and functional middleware
 MIDDLEWARE = [
@@ -73,7 +77,7 @@ MIDDLEWARE = [
     # 'django.contrib.sessions.middleware.SessionMiddleware',  # REMOVED
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # 'django.contrib.auth.middleware.AuthenticationMiddleware',  # REMOVED: DRF handles auth
     # 'django.contrib.messages.middleware.MessageMiddleware',  # REMOVED
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
